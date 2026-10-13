@@ -1,0 +1,1431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Media Center - Chromebook Loaner System</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0f172a;             /* Dark Slate Background */
+      --card-bg: #1e293b;        /* Slate Card Surface */
+      --card-border: #334155;    /* High Contrast Border */
+      --text: #ffffff;           /* Pure White Primary Text */
+      --text-muted: #cbd5e1;     /* High Contrast Secondary Text */
+      --primary: #2563eb;        /* Vibrant Royal Blue */
+      --primary-hover: #1d4ed8;  /* Royal Blue Hover */
+      --success: #0284c7;        /* Sky Blue Success */
+      --warning: #f59e0b;        /* Amber Warning */
+      --danger: #e11d48;         /* High Contrast Rose Red */
+    }
+
+    * { 
+      box-sizing: border-box; 
+      margin: 0; 
+      padding: 0; 
+      font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important; 
+    }
+    body { background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+    
+    .card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; padding: 20px; box-shadow: 0 8px 24px rgba(2, 6, 23, 0.4); }
+    .card-title { font-size: 0.95rem; font-weight: 700; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--card-border); padding-bottom: 12px; color: #ffffff; text-transform: uppercase; letter-spacing: 0.05em; }
+
+    input, select, textarea { width: 100%; padding: 11px 14px; background: #0f172a; border: 1px solid #475569; border-radius: 8px; color: #ffffff; font-size: 0.92rem; }
+    input::placeholder, textarea::placeholder { color: #94a3b8; }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: #3b82f6; ring: 2px rgba(59, 130, 246, 0.5); }
+
+    .btn { padding: 9px 16px; border: none; border-radius: 8px; font-weight: 600; font-size: 0.875rem; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s; }
+    .btn-primary { background: var(--primary); color: #ffffff; }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-success { background: var(--success); color: #ffffff; }
+    .btn-success:hover { background: #0369a1; }
+    .btn-secondary { background: #334155; color: #ffffff; }
+    .btn-secondary:hover { background: #475569; }
+    .btn-warning { background: #f59e0b; color: #0f172a; font-weight: 700; }
+    .btn-danger { background: var(--danger); color: #ffffff; }
+    .btn-danger:hover { background: #be123c; }
+
+    .badge { padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 700; display: inline-block; }
+    .badge-out { background: #4c0519; color: #fecdd3; border: 1px solid #9f1239; }
+    .badge-in { background: #082f49; color: #bae6fd; border: 1px solid #0284c7; }
+    .badge-warn { background: #451a03; color: #fde68a; border: 1px solid #b45309; }
+    .badge-repeat { background: #312e81; color: #e0e7ff; border: 1px solid #6366f1; }
+
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.875rem; }
+    th, td { padding: 12px 14px; border-bottom: 1px solid var(--card-border); }
+    th { background: #0f172a; font-size: 0.75rem; text-transform: uppercase; color: #f1f5f9; font-weight: 700; letter-spacing: 0.05em; position: sticky; top: 0; }
+
+    .modal-backdrop { background: rgba(15, 23, 42, 0.92); backdrop-filter: blur(6px); position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 100; }
+  </style>
+</head>
+<body>
+
+  <header class="bg-[#0f172a] border-b border-[#334155] px-6 py-3 sticky top-0 z-40 flex flex-wrap justify-between items-center gap-4">
+    <div class="flex items-center gap-3">
+      <div class="bg-blue-600 text-white w-10 h-10 rounded-xl flex items-center justify-center text-xl shadow-lg shadow-blue-500/20">
+        💻
+      </div>
+      <div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <h1 class="text-base font-bold text-white tracking-wide">Media Center Loaner Desk</h1>
+          <button onclick="openConfigModal()" id="cloud-status-badge" class="text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-600 px-2.5 py-0.5 rounded-full flex items-center gap-1.5 font-semibold transition cursor-pointer">
+            <span id="cloud-status-dot" class="w-2 h-2 rounded-full bg-amber-400"></span>
+            <span id="cloud-status-text">Local Storage Mode (Click to Set Sync Passphrase)</span>
+          </button>
+        </div>
+        <div class="text-xs text-slate-300 font-medium">Chromebook Tracking, Borrower History & Encrypted Cloud Sync</div>
+      </div>
+    </div>
+
+    <nav class="flex flex-wrap gap-1.5 bg-[#1e293b] p-1 rounded-lg border border-[#334155] text-sm">
+      <button onclick="switchTab('kiosk')" id="nav-kiosk" class="nav-btn px-3.5 py-1.5 rounded-md font-medium text-slate-200 hover:text-white hover:bg-[#334155] transition bg-blue-600 text-white font-semibold">Student Kiosk</button>
+      <button onclick="switchTab('checkin')" id="nav-checkin" class="nav-btn px-3.5 py-1.5 rounded-md font-medium text-slate-200 hover:text-white hover:bg-[#334155] transition">Quick Return</button>
+      <button onclick="switchTab('logs')" id="nav-logs" class="nav-btn px-3.5 py-1.5 rounded-md font-medium text-slate-200 hover:text-white hover:bg-[#334155] transition">Daily Log</button>
+      <button onclick="switchTab('history')" id="nav-history" class="nav-btn px-3.5 py-1.5 rounded-md font-medium text-slate-200 hover:text-white hover:bg-[#334155] transition flex items-center gap-1.5">
+        Borrower History
+        <span id="repeat-borrower-badge" class="bg-blue-900 text-blue-100 font-bold text-[11px] px-2 py-0.5 rounded-full border border-blue-400">0</span>
+      </button>
+      <button onclick="switchTab('inventory')" id="nav-inventory" class="nav-btn px-3.5 py-1.5 rounded-md font-medium text-slate-200 hover:text-white hover:bg-[#334155] transition">Fleet & Roster</button>
+      <button onclick="switchTab('backup')" id="nav-backup" class="nav-btn px-3.5 py-1.5 rounded-md font-medium text-slate-200 hover:text-white hover:bg-[#334155] transition">Backup & Sync</button>
+    </nav>
+  </header>
+
+  <main class="max-w-7xl w-full mx-auto p-4 sm:p-6 flex-1">
+    
+    <section id="tab-kiosk" class="tab-content block">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <div class="lg:col-span-7 space-y-6">
+          <div class="card">
+            <div class="card-title">Checkout Station</div>
+            
+            <form onsubmit="handleCheckoutSubmit(event)" class="space-y-4">
+              <div>
+                <label class="block text-xs font-bold uppercase text-slate-200 mb-1.5">1. Input or Scan Student ID Number or Name</label>
+                <div class="relative">
+                  <input type="text" id="kiosk-student-id" placeholder="Start typing ID # or Name (e.g. 1001, Alex...)" oninput="handleStudentSearchInput(this.value)" onkeydown="handleStudentKeyDown(event)" autofocus autocomplete="off">
+                  <div id="student-suggestions" class="absolute left-0 right-0 top-full mt-1 bg-[#0f172a] border border-[#334155] rounded-lg shadow-2xl z-50 max-h-60 overflow-y-auto hidden divide-y divide-[#1e293b]"></div>
+                </div>
+              </div>
+
+              <div id="student-card" class="card hidden bg-[#0f172a] border-blue-500 p-4">
+                <div class="flex items-start justify-between gap-3">
+                  <div class="flex items-center gap-3">
+                    <div id="student-avatar" class="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-lg shadow-md">?</div>
+                    <div>
+                      <h3 id="student-card-name" class="text-base font-bold text-white">Student Name</h3>
+                      <div class="text-xs text-slate-200 mt-1 space-x-2">
+                        <span>ID: <strong id="student-card-id" class="text-white">---</strong></span>
+                        <span>•</span>
+                        <span>Grade: <strong id="student-card-grade" class="text-white">---</strong></span>
+                      </div>
+                      <div class="text-xs text-sky-300 mt-1 flex items-center gap-1 font-semibold">
+                        <span>📍 6th Period:</span>
+                        <strong id="student-card-period" class="text-white">---</strong>
+                      </div>
+                    </div>
+                  </div>
+                  <div id="borrow-stats-pill" class="text-right">
+                    <span id="monthly-count-badge" class="badge badge-warn">0 Checkouts this Month</span>
+                  </div>
+                </div>
+              </div>
+
+              <div id="student-invalid-card" class="bg-[#0f172a] border border-sky-400 rounded-lg p-4 text-xs text-slate-100 hidden space-y-3">
+                <div class="font-bold text-sky-300 text-sm flex items-center gap-1.5">
+                  <span>ℹ️</span> Student ID Not Found in Roster
+                </div>
+                <p class="text-slate-200">Add student details below to instantly save them to the roster and complete checkout:</p>
+                
+                <div class="grid grid-cols-2 gap-2">
+                  <input type="text" id="quick-add-first" placeholder="First Name" class="text-xs py-2">
+                  <input type="text" id="quick-add-last" placeholder="Last Name" class="text-xs py-2">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <select id="quick-add-grade" class="text-xs py-2">
+                    <option value="9th">9th Grade</option>
+                    <option value="10th">10th Grade</option>
+                    <option value="11th">11th Grade</option>
+                    <option value="12th">12th Grade</option>
+                    <option value="Staff">Staff / Faculty</option>
+                  </select>
+                  <input type="text" id="quick-add-period" placeholder="6th Period (e.g. Rm 204 Bio)" class="text-xs py-2">
+                </div>
+                <button type="button" onclick="quickAddStudent()" class="btn btn-warning w-full py-2 text-xs">
+                  Save Student to Roster & Select
+                </button>
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold uppercase text-slate-200 mb-1.5">2. Scan or Select Asset Tag</label>
+                <input type="text" id="kiosk-asset-tag" placeholder="e.g. CB-1001" autocomplete="off">
+              </div>
+
+              <div class="flex gap-3 pt-2">
+                <button type="submit" class="btn btn-primary flex-1 py-3 text-sm">Issue Loaner Chromebook</button>
+                <button type="button" onclick="resetKioskForm()" class="btn btn-secondary">Clear Form</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <div class="lg:col-span-5 space-y-6">
+          <div class="card">
+            <div class="card-title">Active Fleet Rack (Quick Tap)</div>
+            <div class="flex flex-wrap gap-2" id="shelf-picker-list"></div>
+          </div>
+
+          <div class="card bg-[#1e293b]">
+            <div class="card-title text-xs text-white">System Tips</div>
+            <ul class="text-xs text-slate-200 space-y-2 list-disc list-inside">
+              <li>Start typing student name or ID to auto-complete profile.</li>
+              <li>Press <strong class="text-sky-300">Enter</strong> on student selection to jump directly to scanning the Chromebook tag.</li>
+              <li>Use <strong class="text-sky-300">Fleet & Roster</strong> to paste your full school spreadsheet.</li>
+            </ul>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <section id="tab-checkin" class="tab-content hidden">
+      <div class="card max-w-lg mx-auto mt-8 text-center space-y-4">
+        <div class="card-title justify-center text-lg text-sky-300 border-sky-500/30">
+          ⚡ Quick Return Terminal
+        </div>
+        <p class="text-xs text-slate-200">Scan or type Chromebook Asset Tag to check the device back in immediately.</p>
+        
+        <form onsubmit="handleQuickCheckin(event)" class="space-y-3">
+          <input type="text" id="quick-checkin-input" placeholder="Scan Asset Tag (e.g. CB-1001)" class="text-center text-xl font-mono py-3 uppercase tracking-wider" autofocus>
+          <button type="submit" class="btn btn-success w-full py-3 text-sm">Mark Returned</button>
+        </form>
+
+        <div id="checkin-status-banner" class="hidden p-4 rounded-lg text-left text-xs"></div>
+      </div>
+    </section>
+
+    <section id="tab-logs" class="tab-content hidden">
+      <div class="card">
+        <div class="card-title">
+          <span>Today's Loan Log</span>
+          <span class="text-xs text-slate-200 normal-case">Active Checkouts Today: <strong id="today-checkout-count" class="text-white font-bold">0</strong></span>
+        </div>
+        <div class="overflow-x-auto">
+          <table>
+            <thead>
+              <tr>
+                <th>Time Out</th>
+                <th>Student Name</th>
+                <th>Student ID</th>
+                <th>Grade</th>
+                <th>6th Period Class</th>
+                <th>Asset Tag</th>
+                <th>Time In</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="logs-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-history" class="tab-content hidden space-y-6">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="card p-4 flex flex-col justify-between">
+          <div class="text-xs font-bold text-slate-300 uppercase">Total Borrowers (This Month)</div>
+          <div class="text-2xl font-extrabold text-white mt-2" id="stat-monthly-borrowers">0</div>
+          <div class="text-[11px] text-slate-300 mt-1">Unique students with loans</div>
+        </div>
+
+        <div class="card p-4 flex flex-col justify-between">
+          <div class="text-xs font-bold text-slate-300 uppercase">Repeat Borrowers (3+ Loans)</div>
+          <div class="text-2xl font-extrabold text-amber-300 mt-2" id="stat-repeat-count">0</div>
+          <div class="text-[11px] text-slate-300 mt-1">Students borrowing frequently</div>
+        </div>
+
+        <div class="card p-4 flex flex-col justify-between">
+          <div class="text-xs font-bold text-slate-300 uppercase">Total Loans This Month</div>
+          <div class="text-2xl font-extrabold text-blue-300 mt-2" id="stat-total-loans">0</div>
+          <div class="text-[11px] text-slate-300 mt-1">Cumulative checkouts</div>
+        </div>
+
+        <div class="card p-4 flex flex-col justify-between">
+          <div class="text-xs font-bold text-slate-300 uppercase">Highest Borrower</div>
+          <div class="text-base font-bold text-sky-200 mt-2 truncate" id="stat-top-borrower">None</div>
+          <div class="text-[11px] text-slate-300 mt-1" id="stat-top-borrower-sub">0 checkouts this month</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title flex-wrap gap-2">
+          <div class="flex items-center gap-2">
+            <span>Monthly Borrower Frequency Log</span>
+            <span id="history-month-label" class="text-xs bg-slate-900 text-sky-300 px-2 py-0.5 rounded border border-slate-700 font-mono font-bold">Current Month</span>
+          </div>
+          <div class="flex items-center gap-3 w-full sm:w-auto">
+            <input type="text" id="history-search-input" oninput="renderHistoryView()" placeholder="Filter by student name or ID..." class="text-xs py-1.5 px-3 max-w-xs">
+            <select id="history-month-select" onchange="renderHistoryView()" class="text-xs py-1.5 px-3 w-auto">
+              <option value="CURRENT">Current Month</option>
+              <option value="ALL">All Time</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto max-h-[500px]">
+          <table>
+            <thead>
+              <tr>
+                <th>Student ID</th>
+                <th>Student Full Name</th>
+                <th>Grade</th>
+                <th>6th Period Class</th>
+                <th>Loans This Month</th>
+                <th>Total Loans</th>
+                <th>Borrower Status</th>
+                <th>Detailed History</th>
+              </tr>
+            </thead>
+            <tbody id="history-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-inventory" class="tab-content hidden space-y-6">
+      <div class="card">
+        <div class="card-title">Spreadsheet Roster Import</div>
+        <p class="text-xs text-slate-200 mb-3">
+          Copy columns directly from Excel or Google Sheets in this order: <br>
+          <code class="bg-[#0f172a] text-sky-300 px-2.5 py-1 rounded mt-1 inline-block text-xs font-mono border border-slate-700">First Name | Last Name | Student ID | Grade | 6th Period Class</code>
+        </p>
+        <div class="space-y-3">
+          <textarea id="paste-roster-text" rows="4" placeholder="Alex&#09;Morgan&#09;1001&#09;10th&#09;Room 204 - Biology&#10;Jordan&#09;Smith&#09;1002&#09;11th&#09;Room 112 - History"></textarea>
+          <div class="flex gap-2">
+            <button onclick="handlePasteRosterSubmit()" class="btn btn-primary text-xs">Import Roster</button>
+            <button onclick="openClearConfirmModal()" class="btn btn-danger text-xs">Clear All Roster & Logs</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Import Historical Loan Logs from Excel</div>
+        <p class="text-xs text-slate-200 mb-3">
+          Paste columns directly from an old Excel spreadsheet in this order: <br>
+          <code class="bg-[#0f172a] text-sky-300 px-2.5 py-1 rounded mt-1 inline-block text-xs font-mono border border-slate-700">Student ID | Asset Tag | Date (YYYY-MM-DD or MM/DD/YYYY) | Time Out | Time In | Status (RETURNED or OUT)</code>
+        </p>
+        <div class="space-y-3">
+          <textarea id="paste-history-text" rows="4" placeholder="1001&#09;CB-1001&#09;2026-09-15&#09;08:30 AM&#09;02:15 PM&#09;RETURNED&#10;1002&#09;CB-1002&#09;2026-09-16&#09;09:00 AM&#09;&#09;OUT"></textarea>
+          <button onclick="handlePasteHistorySubmit()" class="btn btn-primary text-xs">Import Historical Logs</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <span>Active Roster Database (<span id="roster-count">0</span> Students)</span>
+          <input type="text" id="roster-search-input" oninput="renderRosterTable()" placeholder="Search roster..." class="text-xs py-1 px-3 max-w-xs">
+        </div>
+        <div class="max-h-[400px] overflow-y-auto">
+          <table>
+            <thead>
+              <tr>
+                <th>Student ID</th>
+                <th>First Name</th>
+                <th>Last Name</th>
+                <th>Grade</th>
+                <th>6th Period Class</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="roster-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-backup" class="tab-content hidden space-y-6">
+      <div class="card">
+        <div class="card-title">Data Management & Cloud Sync Settings</div>
+        <p class="text-xs text-slate-200 mb-4">
+          Export full database snapshots or manually pull/push data from Cloudflare KV.
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="p-4 bg-[#0f172a] rounded-lg border border-[#334155] space-y-3">
+            <h4 class="text-sm font-bold text-white flex items-center gap-2">
+              <span>🔄</span> Manual Cloud Sync
+            </h4>
+            <p class="text-xs text-slate-300">Force pull the latest encrypted data snapshot from Cloudflare.</p>
+            <button onclick="syncFromCloud()" class="btn btn-primary text-xs w-full">Fetch Latest from Cloud</button>
+          </div>
+
+          <div class="p-4 bg-[#0f172a] rounded-lg border border-[#334155] space-y-3">
+            <h4 class="text-sm font-bold text-white flex items-center gap-2">
+              <span>📥</span> Export JSON Backup
+            </h4>
+            <p class="text-xs text-slate-300">Download a local file backup of all roster members and loan logs.</p>
+            <button onclick="exportJsonData()" class="btn btn-secondary text-xs w-full">Download JSON</button>
+          </div>
+
+          <div class="p-4 bg-[#0f172a] rounded-lg border border-[#334155] space-y-3">
+            <h4 class="text-sm font-bold text-white flex items-center gap-2">
+              <span>📊</span> Export CSV Loan Logs
+            </h4>
+            <p class="text-xs text-slate-300">Export loan history to a clean CSV file compatible with Excel.</p>
+            <button onclick="exportCsvLogs()" class="btn btn-success text-xs w-full">Export CSV Logs</button>
+          </div>
+        </div>
+
+        <div class="mt-6 pt-4 border-t border-[#334155]">
+          <h4 class="text-sm font-bold text-white mb-2 flex items-center gap-2">
+            <span>📤</span> Restore from Local JSON Backup
+          </h4>
+          <p class="text-xs text-slate-300 mb-3">Paste a previously exported JSON backup file to restore database state:</p>
+          <textarea id="import-json-input" rows="4" placeholder="Paste exported JSON content here..."></textarea>
+          <div class="mt-2 text-right">
+            <button onclick="importJsonData()" class="btn btn-warning text-xs">Restore Database</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Modals -->
+    <div id="student-history-modal" class="modal-backdrop hidden">
+      <div class="card max-w-2xl w-full mx-4 max-h-[85vh] flex flex-col justify-between border-blue-500 shadow-2xl">
+        <div class="border-b border-[#334155] pb-3 mb-3 flex justify-between items-start">
+          <div>
+            <h2 id="modal-student-name" class="text-lg font-bold text-white">Student Name</h2>
+            <div id="modal-student-sub" class="text-xs text-sky-300 font-medium">ID: --- | Grade: ---</div>
+          </div>
+          <button onclick="closeModal()" class="btn btn-secondary py-1 px-3 text-xs">✕ Close</button>
+        </div>
+        <div class="overflow-y-auto max-h-[50vh]">
+          <table>
+            <thead>
+              <tr>
+                <th>Date & Time Out</th>
+                <th>Asset Tag</th>
+                <th>Time In</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="modal-tbody"></tbody>
+          </table>
+        </div>
+        <div class="mt-4 pt-3 border-t border-[#334155] text-right">
+          <button onclick="closeModal()" class="btn btn-primary text-xs">Done</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="edit-student-modal" class="modal-backdrop hidden">
+      <div class="card max-w-md w-full mx-4 border-blue-500 shadow-2xl space-y-4">
+        <div class="flex justify-between items-center border-b border-[#334155] pb-3">
+          <h3 class="text-base font-bold text-white flex items-center gap-2">
+            <span>✏️</span> Edit Student Record
+          </h3>
+          <button type="button" onclick="closeEditModal()" class="btn btn-secondary py-1 px-2.5 text-xs">✕</button>
+        </div>
+
+        <input type="hidden" id="edit-original-id">
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] font-bold text-slate-300 uppercase mb-1">First Name</label>
+            <input type="text" id="edit-first-name" class="text-xs">
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-300 uppercase mb-1">Last Name</label>
+            <input type="text" id="edit-last-name" class="text-xs">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] font-bold text-slate-300 uppercase mb-1">Student ID #</label>
+            <input type="text" id="edit-student-id" class="text-xs">
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-300 uppercase mb-1">Grade Level</label>
+            <select id="edit-grade" class="text-xs">
+              <option value="9th">9th Grade</option>
+              <option value="10th">10th Grade</option>
+              <option value="11th">11th Grade</option>
+              <option value="12th">12th Grade</option>
+              <option value="Staff">Staff / Faculty</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-bold text-slate-300 uppercase mb-1">6th Period Location / Teacher</label>
+          <input type="text" id="edit-period" placeholder="e.g. Rm 204 - Biology" class="text-xs">
+        </div>
+
+        <div class="flex justify-between gap-2 pt-2 border-t border-[#334155]">
+          <button type="button" onclick="deleteStudent()" class="btn btn-danger py-2 text-xs">Delete Student</button>
+          <div class="flex gap-2">
+            <button type="button" onclick="closeEditModal()" class="btn btn-secondary py-2 text-xs">Cancel</button>
+            <button type="button" onclick="saveEditedStudent()" class="btn btn-primary py-2 text-xs">Save Changes</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Passphrase Encryption Config Modal -->
+    <div id="config-modal" class="modal-backdrop hidden">
+      <div class="card max-w-lg w-full mx-4 border-blue-500 shadow-2xl space-y-4">
+        <div class="flex justify-between items-center border-b border-[#334155] pb-3">
+          <h3 class="text-base font-bold text-white flex items-center gap-2">
+            <span>🔒</span> Shared Cloud Encryption Passphrase
+          </h3>
+          <button type="button" onclick="closeConfigModal()" class="btn btn-secondary py-1 px-2.5 text-xs">✕</button>
+        </div>
+
+        <p class="text-xs text-slate-200 leading-relaxed">
+          Enter a shared passphrase. All devices using this same passphrase will encrypt and sync the roster & loan logs through your Cloudflare Pages KV store.
+        </p>
+
+        <div>
+          <label class="block text-xs font-bold uppercase text-slate-300 mb-1">Secret Passphrase</label>
+          <input type="password" id="passphrase-input" placeholder="Enter school secret password..." class="text-xs py-2">
+        </div>
+
+        <div class="flex justify-between items-center pt-2 border-t border-[#334155]">
+          <button type="button" onclick="clearCloudPassphrase()" class="btn btn-secondary py-2 text-xs">Disable Cloud Sync</button>
+          <button type="button" onclick="saveCloudPassphrase()" class="btn btn-primary py-2 text-xs">Save & Enable Cloud Sync</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="clear-confirm-modal" class="modal-backdrop hidden">
+      <div class="card max-w-md w-full mx-4 border-rose-500 shadow-2xl space-y-4">
+        <div class="flex justify-between items-center border-b border-[#334155] pb-3">
+          <h3 class="text-base font-bold text-rose-300 flex items-center gap-2">
+            <span>⚠️</span> Clear Data
+          </h3>
+          <button type="button" onclick="closeClearConfirmModal()" class="btn btn-secondary py-1 px-2.5 text-xs">✕</button>
+        </div>
+
+        <p class="text-xs text-slate-200 leading-relaxed">
+          Are you sure you want to clear all custom student roster entries and historical loan logs?
+        </p>
+
+        <div class="flex justify-end gap-2 pt-2 border-t border-[#334155]">
+          <button type="button" onclick="closeClearConfirmModal()" class="btn btn-secondary py-2 text-xs">Cancel</button>
+          <button type="button" onclick="confirmClearAllData()" class="btn btn-danger py-2 text-xs">Yes, Clear All Data</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    let customRoster = [];
+    let logs = [];
+    let activeMatches = [];
+    let highlightedIndex = -1;
+    let syncPassphrase = localStorage.getItem('loaner_sync_passphrase') || '';
+
+    let shelfAssets = ["CB-1001", "CB-1002", "CB-1003", "CB-1004", "CB-1005", "CB-1006", "CB-1007", "CB-1008"];
+
+    // Helper functions for reliable Array <-> Base64 conversion
+    function bufToBase64(buf) {
+      const bytes = new Uint8Array(buf);
+      let binary = '';
+      for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      return btoa(binary);
+    }
+
+    function base64ToBuf(b64) {
+      const binStr = atob(b64);
+      const len = binStr.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binStr.charCodeAt(i);
+      }
+      return bytes.buffer;
+    }
+
+    async function getCryptoKey(password, salt) {
+      const enc = new TextEncoder();
+      const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveKey"]);
+      return crypto.subtle.deriveKey(
+        { name: "PBKDF2", salt: salt, iterations: 100000, hash: "SHA-256" },
+        keyMaterial,
+        { name: "AES-GCM", length: 256 },
+        false,
+        ["encrypt", "decrypt"]
+      );
+    }
+
+    async function encryptPayload(dataObj, password) {
+      const enc = new TextEncoder();
+      const salt = crypto.getRandomValues(new Uint8Array(16));
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const key = await getCryptoKey(password, salt);
+
+      const plaintext = JSON.stringify(dataObj);
+      const encryptedContent = await crypto.subtle.encrypt({ name: "AES-GCM", iv: iv }, key, enc.encode(plaintext));
+
+      return {
+        ciphertext: bufToBase64(encryptedContent),
+        salt: bufToBase64(salt.buffer),
+        iv: bufToBase64(iv.buffer)
+      };
+    }
+
+    async function decryptPayload(encryptedPayload, password) {
+      if (!encryptedPayload || !encryptedPayload.ciphertext) return null;
+      const dec = new TextDecoder();
+      const salt = new Uint8Array(base64ToBuf(encryptedPayload.salt));
+      const iv = new Uint8Array(base64ToBuf(encryptedPayload.iv));
+      const ciphertext = base64ToBuf(encryptedPayload.ciphertext);
+
+      const key = await getCryptoKey(password, salt);
+      const decryptedContent = await crypto.subtle.decrypt({ name: "AES-GCM", iv: iv }, key, ciphertext);
+      return JSON.parse(dec.decode(decryptedContent));
+    }
+
+    async function pushToCloud() {
+      if (!syncPassphrase) return;
+      try {
+        const fullData = { roster: customRoster, logs: logs };
+        const encrypted = await encryptPayload(fullData, syncPassphrase);
+
+        const res = await fetch("/api", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key: "media_center_db", encryptedData: encrypted })
+        });
+        if (res.ok) {
+          updateCloudStatusBanner('online');
+        } else {
+          updateCloudStatusBanner('error');
+        }
+      } catch (err) {
+        console.error("Cloud push failed:", err);
+        updateCloudStatusBanner('error');
+      }
+    }
+
+    async function syncFromCloud() {
+      if (!syncPassphrase) {
+        updateCloudStatusBanner('local');
+        return;
+      }
+
+      try {
+        const res = await fetch("/api?key=media_center_db");
+        if (!res.ok) throw new Error("API network failure");
+
+        const encryptedPayload = await res.json();
+        if (encryptedPayload) {
+          try {
+            const decrypted = await decryptPayload(encryptedPayload, syncPassphrase);
+            if (decrypted && Array.isArray(decrypted.roster) && Array.isArray(decrypted.logs)) {
+              customRoster = decrypted.roster;
+              logs = decrypted.logs;
+              saveLocalBackup(false);
+              renderAllViews();
+              updateCloudStatusBanner('online');
+              return;
+            }
+          } catch(e) {
+            console.error("Decryption failed:", e);
+            updateCloudStatusBanner('error');
+            return;
+          }
+        }
+        // If dataset doesn't exist yet on Cloudflare, push local data up first
+        await pushToCloud();
+      } catch (err) {
+        console.error("Cloud pull failed:", err);
+        updateCloudStatusBanner('error');
+      }
+    }
+
+    function getFullRoster() {
+      return customRoster;
+    }
+
+    function getStudentFullName(student) {
+      if (!student) return "Unknown";
+      return `${student.firstName || ''} ${student.lastName || ''}`.trim();
+    }
+
+    window.onload = async function() {
+      const savedCustom = localStorage.getItem('loaner_custom_roster');
+      if (savedCustom) {
+        try { 
+          const parsed = JSON.parse(savedCustom);
+          if (Array.isArray(parsed)) customRoster = parsed;
+        } catch(e) {}
+      }
+      
+      const savedLogs = localStorage.getItem('loaner_activity_logs');
+      if (savedLogs) {
+        try { 
+          const parsed = JSON.parse(savedLogs);
+          if (Array.isArray(parsed)) logs = parsed;
+        } catch(e) {}
+      }
+
+      renderAllViews();
+
+      if (syncPassphrase) {
+        await syncFromCloud();
+      } else {
+        updateCloudStatusBanner('local');
+      }
+    };
+
+    function saveLocalBackup(triggerCloudPush = true) {
+      localStorage.setItem('loaner_custom_roster', JSON.stringify(customRoster));
+      localStorage.setItem('loaner_activity_logs', JSON.stringify(logs));
+      if (triggerCloudPush && syncPassphrase) {
+        pushToCloud();
+      }
+    }
+
+    window.renderAllViews = function() {
+      renderShelfPicker();
+      renderLogsTable();
+      renderRosterTable();
+      renderHistoryView();
+    };
+
+    function renderLogsTable() {
+      const tbody = document.getElementById('logs-tbody');
+      const countEl = document.getElementById('today-checkout-count');
+      if (!tbody) return;
+
+      const todayStr = new Date().toISOString().split('T')[0];
+      const todayActiveCount = logs.filter(l => l.dateStr === todayStr && l.status === 'OUT').length;
+      if (countEl) countEl.innerText = todayActiveCount;
+
+      if (logs.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="9" class="text-center text-slate-400 py-6">No checkouts logged yet. Use the Student Kiosk tab to issue a Chromebook.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = logs.map(l => `
+        <tr>
+          <td class="text-slate-300 text-xs">${l.timeOut || '---'}</td>
+          <td class="font-bold text-white">${l.firstName || ''} ${l.lastName || ''}</td>
+          <td class="font-mono text-sky-300">${l.studentId || '---'}</td>
+          <td class="text-slate-300 text-xs">${l.grade || '---'}</td>
+          <td class="text-sky-200 text-xs">${l.period6 || '---'}</td>
+          <td class="font-mono text-white font-bold">${l.assetTag || '---'}</td>
+          <td class="text-slate-300 text-xs">${l.timeIn || '---'}</td>
+          <td>
+            ${l.status === 'OUT' ? '<span class="badge badge-out">OUT</span>' : '<span class="badge badge-in">RETURNED</span>'}
+          </td>
+          <td>
+            ${l.status === 'OUT' ? `<button onclick="quickReturnLog(${l.id})" class="btn btn-success py-1 px-2.5 text-xs">Return Device</button>` : '<span class="text-slate-400 text-xs">Completed</span>'}
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function renderRosterTable() {
+      const tbody = document.getElementById('roster-tbody');
+      const countEl = document.getElementById('roster-count');
+      const searchInput = document.getElementById('roster-search-input');
+      if (!tbody) return;
+
+      const query = searchInput ? searchInput.value.trim().toLowerCase() : '';
+      const roster = getFullRoster();
+
+      const filtered = roster.filter(s => {
+        if (!query) return true;
+        const full = getStudentFullName(s).toLowerCase();
+        return full.includes(query) || (s.id && s.id.toLowerCase().includes(query));
+      });
+
+      if (countEl) countEl.innerText = roster.length;
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center text-slate-400 py-6">No students found matching search.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(s => `
+        <tr>
+          <td class="font-mono text-sky-300 font-bold">${s.id || '---'}</td>
+          <td class="text-white font-medium">${s.firstName || ''}</td>
+          <td class="text-white font-medium">${s.lastName || ''}</td>
+          <td class="text-slate-300">${s.grade || '---'}</td>
+          <td class="text-sky-200">${s.period6 || 'Unassigned'}</td>
+          <td>
+            <button onclick="openEditModal('${s.id}')" class="btn btn-secondary py-1 px-2.5 text-xs">✏️ Edit</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function renderHistoryView() {
+      const tbody = document.getElementById('history-tbody');
+      const monthSelect = document.getElementById('history-month-select');
+      const historySearch = document.getElementById('history-search-input');
+      if (!tbody) return;
+
+      const filterType = monthSelect ? monthSelect.value : 'CURRENT';
+      const query = historySearch ? historySearch.value.trim().toLowerCase() : '';
+      const currentMonthStr = new Date().toISOString().substring(0, 7);
+
+      const roster = getFullRoster();
+      
+      const monthLogs = logs.filter(l => l.dateStr && l.dateStr.startsWith(currentMonthStr));
+      const uniqueMonthlyBorrowers = new Set(monthLogs.map(l => l.studentId)).size;
+      const totalMonthlyLoans = monthLogs.length;
+
+      const studentLoanCountsMonth = {};
+      monthLogs.forEach(l => {
+        studentLoanCountsMonth[l.studentId] = (studentLoanCountsMonth[l.studentId] || 0) + 1;
+      });
+
+      const studentLoanCountsAll = {};
+      logs.forEach(l => {
+        studentLoanCountsAll[l.studentId] = (studentLoanCountsAll[l.studentId] || 0) + 1;
+      });
+
+      const repeatBorrowers = Object.values(studentLoanCountsMonth).filter(c => c >= 3).length;
+
+      let topStudentId = null;
+      let maxLoans = 0;
+      Object.entries(studentLoanCountsMonth).forEach(([sId, count]) => {
+        if (count > maxLoans) {
+          maxLoans = count;
+          topStudentId = sId;
+        }
+      });
+
+      const statMonthly = document.getElementById('stat-monthly-borrowers');
+      const statRepeat = document.getElementById('stat-repeat-count');
+      const statTotal = document.getElementById('stat-total-loans');
+      const statTop = document.getElementById('stat-top-borrower');
+      const statTopSub = document.getElementById('stat-top-borrower-sub');
+      const repeatBadge = document.getElementById('repeat-borrower-badge');
+
+      if (statMonthly) statMonthly.innerText = uniqueMonthlyBorrowers;
+      if (statRepeat) statRepeat.innerText = repeatBorrowers;
+      if (statTotal) statTotal.innerText = totalMonthlyLoans;
+      if (repeatBadge) repeatBadge.innerText = repeatBorrowers;
+
+      if (topStudentId) {
+        const topStudent = roster.find(s => s.id === topStudentId);
+        if (statTop) statTop.innerText = topStudent ? getStudentFullName(topStudent) : `ID: ${topStudentId}`;
+        if (statTopSub) statTopSub.innerText = `${maxLoans} checkouts this month`;
+      } else {
+        if (statTop) statTop.innerText = "None";
+        if (statTopSub) statTopSub.innerText = "0 checkouts this month";
+      }
+
+      let displayStudents = roster.filter(s => {
+        const nameMatch = getStudentFullName(s).toLowerCase().includes(query) || (s.id && s.id.toLowerCase().includes(query));
+        if (!nameMatch) return false;
+        
+        if (filterType === 'CURRENT') {
+          return (studentLoanCountsMonth[s.id] || 0) > 0;
+        }
+        return (studentLoanCountsAll[s.id] || 0) > 0;
+      });
+
+      if (displayStudents.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center text-slate-400 py-6">No borrowing history found for selected filter.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = displayStudents.map(s => {
+        const monthLoans = studentLoanCountsMonth[s.id] || 0;
+        const totalLoans = studentLoanCountsAll[s.id] || 0;
+        
+        let statusBadge = `<span class="badge badge-in">Standard Borrower</span>`;
+        if (monthLoans >= 3) {
+          statusBadge = `<span class="badge badge-repeat">⚠️ Frequent Borrower (${monthLoans})</span>`;
+        } else if (monthLoans > 0) {
+          statusBadge = `<span class="badge badge-warn">${monthLoans} Loan(s)</span>`;
+        }
+
+        return `
+          <tr>
+            <td class="font-mono text-sky-300 font-bold">${s.id}</td>
+            <td class="text-white font-bold">${getStudentFullName(s)}</td>
+            <td class="text-slate-300">${s.grade || '---'}</td>
+            <td class="text-sky-200">${s.period6 || 'Unassigned'}</td>
+            <td class="font-bold text-amber-300 text-center">${monthLoans}</td>
+            <td class="font-bold text-white text-center">${totalLoans}</td>
+            <td>${statusBadge}</td>
+            <td>
+              <button onclick="openModal('${s.id}')" class="btn btn-secondary py-1 px-2.5 text-xs">View History</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function openClearConfirmModal() {
+      document.getElementById('clear-confirm-modal').classList.remove('hidden');
+    }
+
+    function closeClearConfirmModal() {
+      document.getElementById('clear-confirm-modal').classList.add('hidden');
+    }
+
+    function confirmClearAllData() {
+      customRoster = [];
+      logs = [];
+      saveLocalBackup();
+      closeClearConfirmModal();
+      renderAllViews();
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.remove('bg-blue-600', 'text-white', 'font-semibold');
+        btn.classList.add('text-slate-200');
+      });
+      
+      const activeTab = document.getElementById(`tab-${tabId}`);
+      if (activeTab) activeTab.classList.remove('hidden');
+
+      const activeBtn = document.getElementById(`nav-${tabId}`);
+      if (activeBtn) {
+        activeBtn.classList.add('bg-blue-600', 'text-white', 'font-semibold');
+        activeBtn.classList.remove('text-slate-200');
+      }
+
+      if (tabId === 'history') renderHistoryView();
+      if (tabId === 'inventory') renderRosterTable();
+    }
+
+    function handleStudentSearchInput(val) {
+      const query = val.trim().toLowerCase();
+      const suggestionsBox = document.getElementById('student-suggestions');
+      const card = document.getElementById('student-card');
+      const invalidCard = document.getElementById('student-invalid-card');
+
+      highlightedIndex = -1;
+
+      if (!query) {
+        suggestionsBox.classList.add('hidden');
+        card.classList.add('hidden');
+        invalidCard.classList.add('hidden');
+        activeMatches = [];
+        return;
+      }
+
+      const roster = getFullRoster();
+
+      const exactMatch = roster.find(s => s.id && s.id.toLowerCase() === query);
+      if (exactMatch) {
+        activeMatches = [exactMatch];
+        suggestionsBox.classList.add('hidden');
+        selectStudent(exactMatch.id, false);
+        return;
+      }
+
+      activeMatches = roster.filter(s => {
+        const full = getStudentFullName(s).toLowerCase();
+        return (s.id && s.id.toLowerCase().includes(query)) || full.includes(query);
+      });
+
+      if (activeMatches.length > 0) {
+        invalidCard.classList.add('hidden');
+        card.classList.add('hidden');
+        renderSuggestions();
+        suggestionsBox.classList.remove('hidden');
+      } else {
+        suggestionsBox.classList.add('hidden');
+        card.classList.add('hidden');
+        invalidCard.classList.remove('hidden');
+      }
+    }
+
+    function renderSuggestions() {
+      const suggestionsBox = document.getElementById('student-suggestions');
+      suggestionsBox.innerHTML = activeMatches.map((s, idx) => `
+        <div onclick="selectStudent('${s.id}', true)" 
+             class="suggestion-item p-3 cursor-pointer flex items-center justify-between transition group ${idx === highlightedIndex ? 'bg-blue-900/60 border-l-4 border-blue-400' : 'hover:bg-[#1e293b]'}">
+          <div>
+            <div class="text-sm font-bold text-white group-hover:text-sky-300">${getStudentFullName(s)}</div>
+            <div class="text-xs text-slate-300">Grade: ${s.grade || 'N/A'} • 6th Period: <span class="text-sky-300 font-medium">${s.period6 || 'Unassigned'}</span></div>
+          </div>
+          <div class="text-right">
+            <span class="text-xs font-mono text-sky-200 bg-slate-900 px-2.5 py-1 rounded border border-slate-700">ID: ${s.id}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function handleStudentKeyDown(e) {
+      const suggestionsBox = document.getElementById('student-suggestions');
+      const isSuggestionsVisible = !suggestionsBox.classList.contains('hidden');
+
+      if (e.key === 'ArrowDown') {
+        if (isSuggestionsVisible && activeMatches.length > 0) {
+          e.preventDefault();
+          highlightedIndex = (highlightedIndex + 1) % activeMatches.length;
+          renderSuggestions();
+        }
+      } else if (e.key === 'ArrowUp') {
+        if (isSuggestionsVisible && activeMatches.length > 0) {
+          e.preventDefault();
+          highlightedIndex = (highlightedIndex - 1 + activeMatches.length) % activeMatches.length;
+          renderSuggestions();
+        }
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (isSuggestionsVisible && activeMatches.length > 0) {
+          const targetIndex = highlightedIndex >= 0 ? highlightedIndex : 0;
+          const chosenStudent = activeMatches[targetIndex];
+          if (chosenStudent) {
+            selectStudent(chosenStudent.id, true);
+          }
+        } else {
+          const currentId = document.getElementById('kiosk-student-id').value.trim();
+          if (currentId) {
+            const student = getFullRoster().find(s => s.id.toLowerCase() === currentId.toLowerCase());
+            if (student) {
+              selectStudent(student.id, true);
+            }
+          }
+        }
+      }
+    }
+
+    function selectStudent(studentId, focusAssetTag = false) {
+      const student = getFullRoster().find(s => s.id === studentId);
+      if (!student) return;
+
+      document.getElementById('kiosk-student-id').value = student.id;
+      document.getElementById('student-suggestions').classList.add('hidden');
+      document.getElementById('student-invalid-card').classList.add('hidden');
+
+      const card = document.getElementById('student-card');
+      card.classList.remove('hidden');
+
+      document.getElementById('student-card-name').innerText = getStudentFullName(student);
+      document.getElementById('student-card-id').innerText = student.id;
+      document.getElementById('student-card-grade').innerText = student.grade || 'N/A';
+      document.getElementById('student-card-period').innerText = student.period6 || 'Unassigned';
+      document.getElementById('student-avatar').innerText = (student.firstName ? student.firstName.charAt(0) : '?').toUpperCase();
+
+      const currentMonth = new Date().toISOString().substring(0, 7);
+      const monthlyCount = logs.filter(l => l.studentId === student.id && l.dateStr && l.dateStr.startsWith(currentMonth)).length;
+
+      const badgeEl = document.getElementById('monthly-count-badge');
+      if (monthlyCount >= 3) {
+        badgeEl.className = 'badge badge-repeat';
+        badgeEl.innerText = `⚠️ ${monthlyCount} Loans this Month (Repeat Borrower)`;
+      } else if (monthlyCount > 0) {
+        badgeEl.className = 'badge badge-warn';
+        badgeEl.innerText = `${monthlyCount} Loan(s) this Month`;
+      } else {
+        badgeEl.className = 'badge badge-in';
+        badgeEl.innerText = `First Checkout this Month`;
+      }
+
+      if (focusAssetTag) {
+        setTimeout(() => {
+          document.getElementById('kiosk-asset-tag').focus();
+        }, 50);
+      }
+    }
+
+    function quickAddStudent() {
+      const id = document.getElementById('kiosk-student-id').value.trim();
+      const firstName = document.getElementById('quick-add-first').value.trim();
+      const lastName = document.getElementById('quick-add-last').value.trim();
+      const grade = document.getElementById('quick-add-grade').value;
+      const period6 = document.getElementById('quick-add-period').value.trim() || 'Unassigned';
+
+      if (!id || !firstName || !lastName) return;
+
+      const newStudent = { firstName, lastName, id, grade, period6 };
+      customRoster.unshift(newStudent);
+      saveLocalBackup();
+
+      document.getElementById('quick-add-first').value = '';
+      document.getElementById('quick-add-last').value = '';
+      document.getElementById('quick-add-period').value = '';
+      
+      renderAllViews();
+      selectStudent(id);
+    }
+
+    function handleCheckoutSubmit(e) {
+      e.preventDefault();
+      const studentId = document.getElementById('kiosk-student-id').value.trim();
+      const assetTag = document.getElementById('kiosk-asset-tag').value.trim().toUpperCase();
+
+      const student = getFullRoster().find(s => s.id === studentId);
+      if (!student || !assetTag) return;
+
+      const now = new Date();
+      const dateStr = now.toISOString().split('T')[0];
+      const timeOut = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      const newLog = {
+        id: Date.now(),
+        studentId: student.id,
+        firstName: student.firstName,
+        lastName: student.lastName,
+        grade: student.grade || 'N/A',
+        period6: student.period6 || 'N/A',
+        assetTag: assetTag,
+        dateStr: dateStr,
+        timeOut: timeOut,
+        timeIn: null,
+        status: 'OUT'
+      };
+
+      logs.unshift(newLog);
+      saveLocalBackup();
+
+      resetKioskForm();
+      renderAllViews();
+      switchTab('logs');
+    }
+
+    function resetKioskForm() {
+      document.getElementById('kiosk-student-id').value = '';
+      document.getElementById('kiosk-asset-tag').value = '';
+      document.getElementById('student-suggestions').classList.add('hidden');
+      document.getElementById('student-card').classList.add('hidden');
+      document.getElementById('student-invalid-card').classList.add('hidden');
+    }
+
+    function handleQuickCheckin(e) {
+      e.preventDefault();
+      const tag = document.getElementById('quick-checkin-input').value.trim().toUpperCase();
+      const banner = document.getElementById('checkin-status-banner');
+      
+      if (!tag) return;
+
+      const entry = logs.find(l => l.assetTag === tag && l.status === 'OUT');
+      if (entry) {
+        entry.status = 'RETURNED';
+        entry.timeIn = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        saveLocalBackup();
+
+        banner.className = "p-4 rounded-lg text-left text-xs bg-sky-950/80 border border-sky-500/40 text-sky-100 block";
+        banner.innerHTML = `<strong>✅ Device Returned Successfully!</strong><br>Asset <strong>${entry.assetTag}</strong> checked back in for ${entry.firstName} ${entry.lastName} (${entry.period6}).`;
+        
+        document.getElementById('quick-checkin-input').value = '';
+        renderAllViews();
+      } else {
+        banner.className = "p-4 rounded-lg text-left text-xs bg-rose-950/80 border border-rose-500/40 text-rose-200 block";
+        banner.innerHTML = `<strong>⚠️ No Active Checkout Found</strong><br>No active loan recorded for Asset Tag: <strong>${tag}</strong>.`;
+      }
+    }
+
+    function handlePasteRosterSubmit() {
+      const text = document.getElementById('paste-roster-text').value;
+      if (!text.trim()) return;
+
+      const lines = text.split(/\r?\n/);
+
+      lines.forEach(line => {
+        if (!line.trim()) return;
+        const cols = line.split(/,|\t/);
+        
+        if (cols.length >= 3) {
+          const firstName = cols[0] ? cols[0].trim() : '';
+          const lastName = cols[1] ? cols[1].trim() : '';
+          const id = cols[2] ? cols[2].trim() : '';
+          const grade = cols[3] ? cols[3].trim() : 'N/A';
+          const period6 = cols[4] ? cols[4].trim() : 'Unassigned';
+
+          if (id && firstName) {
+            const newStudent = { firstName, lastName, id, grade, period6 };
+            customRoster.push(newStudent);
+          }
+        }
+      });
+
+      saveLocalBackup();
+      document.getElementById('paste-roster-text').value = '';
+      renderAllViews();
+    }
+
+    function handlePasteHistorySubmit() {
+      const text = document.getElementById('paste-history-text').value;
+      if (!text.trim()) return;
+
+      const lines = text.split(/\r?\n/);
+      const roster = getFullRoster();
+
+      lines.forEach((line, idx) => {
+        if (!line.trim()) return;
+        const cols = line.split(/,|\t/);
+
+        if (cols.length >= 2) {
+          const studentId = cols[0] ? cols[0].trim() : '';
+          const assetTag = cols[1] ? cols[1].trim().toUpperCase() : '';
+          const dateStr = cols[2] ? cols[2].trim() : new Date().toISOString().split('T')[0];
+          const timeOut = cols[3] ? cols[3].trim() : '08:00 AM';
+          const timeIn = cols[4] ? cols[4].trim() : null;
+          const status = cols[5] ? cols[5].trim().toUpperCase() : (timeIn ? 'RETURNED' : 'OUT');
+
+          if (studentId && assetTag) {
+            const student = roster.find(s => s.id.toLowerCase() === studentId.toLowerCase()) || {};
+
+            const logEntry = {
+              id: Date.now() + idx,
+              studentId: studentId,
+              firstName: student.firstName || 'Historical',
+              lastName: student.lastName || 'Record',
+              grade: student.grade || 'N/A',
+              period6: student.period6 || 'N/A',
+              assetTag: assetTag,
+              dateStr: dateStr,
+              timeOut: timeOut,
+              timeIn: timeIn || null,
+              status: status === 'RETURNED' ? 'RETURNED' : 'OUT'
+            };
+
+            logs.push(logEntry);
+          }
+        }
+      });
+
+      saveLocalBackup();
+      document.getElementById('paste-history-text').value = '';
+      renderAllViews();
+    }
+
+    function quickReturnLog(logId) {
+      const entry = logs.find(l => l.id === logId);
+      if (entry) {
+        entry.status = 'RETURNED';
+        entry.timeIn = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        saveLocalBackup();
+        renderAllViews();
+      }
+    }
+
+    function renderShelfPicker() {
+      const container = document.getElementById('shelf-picker-list');
+      if (!container) return;
+
+      container.innerHTML = shelfAssets.map(tag => {
+        const isCurrentlyOut = logs.some(l => l.assetTag === tag && l.status === 'OUT');
+        if (isCurrentlyOut) {
+          return `
+            <button type="button" disabled class="px-3 py-2 rounded-lg text-xs font-mono bg-rose-950/60 text-rose-300 border border-rose-800/60 cursor-not-allowed opacity-60">
+              ❌ ${tag} (OUT)
+            </button>
+          `;
+        }
+        return `
+          <button type="button" onclick="selectShelfAsset('${tag}')" class="px-3 py-2 rounded-lg text-xs font-mono font-bold bg-slate-800 text-sky-300 border border-slate-700 hover:bg-blue-600 hover:text-white hover:border-blue-500 transition shadow">
+            💻 ${tag}
+          </button>
+        `;
+      }).join('');
+    }
+
+    function selectShelfAsset(tag) {
+      document.getElementById('kiosk-asset-tag').value = tag;
+    }
+
+    function openModal(studentId) {
+      const roster = getFullRoster();
+      const student = roster.find(s => s.id === studentId);
+      const studentLogs = logs.filter(l => l.studentId === studentId);
+
+      document.getElementById('modal-student-name').innerText = student ? getStudentFullName(student) : `Student ID: ${studentId}`;
+      document.getElementById('modal-student-sub').innerText = `ID: ${studentId} | Grade: ${student?.grade || 'N/A'} | 6th Period: ${student?.period6 || 'Unassigned'}`;
+
+      const tbody = document.getElementById('modal-tbody');
+      if (studentLogs.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" class="text-center text-slate-400 py-4">No loan records found for this student.</td></tr>`;
+      } else {
+        tbody.innerHTML = studentLogs.map(l => `
+          <tr>
+            <td class="text-slate-300 text-xs">${l.dateStr || ''} ${l.timeOut || ''}</td>
+            <td class="font-mono text-white font-bold">${l.assetTag}</td>
+            <td class="text-slate-300 text-xs">${l.timeIn || '---'}</td>
+            <td>
+              ${l.status === 'OUT' ? `<span class="badge badge-out">OUT</span>` : `<span class="badge badge-in">RETURNED</span>`}
+            </td>
+          </tr>
+        `).join('');
+      }
+
+      document.getElementById('student-history-modal').classList.remove('hidden');
+    }
+
+    function closeModal() {
+      document.getElementById('student-history-modal').classList.add('hidden');
+    }
+
+    function openEditModal(studentId) {
+      const student = getFullRoster().find(s => s.id === studentId);
+      if (!student) return;
+
+      document.getElementById('edit-original-id').value = student.id;
+      document.getElementById('edit-first-name').value = student.firstName || '';
+      document.getElementById('edit-last-name').value = student.lastName || '';
+      document.getElementById('edit-student-id').value = student.id;
+      document.getElementById('edit-grade').value = student.grade || '9th';
+      document.getElementById('edit-period').value = student.period6 || '';
+
+      document.getElementById('edit-student-modal').classList.remove('hidden');
+    }
+
+    function closeEditModal() {
+      document.getElementById('edit-student-modal').classList.add('hidden');
+    }
+
+    function saveEditedStudent() {
+      const origId = document.getElementById('edit-original-id').value;
+      const firstName = document.getElementById('edit-first-name').value.trim();
+      const lastName = document.getElementById('edit-last-name').value.trim();
+      const newId = document.getElementById('edit-student-id').value.trim();
+      const grade = document.getElementById('edit-grade').value;
+      const period6 = document.getElementById('edit-period').value.trim() || 'Unassigned';
+
+      if (!newId || !firstName) return;
+
+      const student = customRoster.find(s => s.id === origId);
+      if (student) {
+        student.firstName = firstName;
+        student.lastName = lastName;
+        student.id = newId;
+        student.grade = grade;
+        student.period6 = period6;
+
+        saveLocalBackup();
+      }
+
+      closeEditModal();
+      renderAllViews();
+    }
+
+    function deleteStudent() {
+      const origId = document.getElementById('edit-original-id').value;
+      const idx = customRoster.findIndex(s => s.id === origId);
+      if (idx !== -1) {
+        customRoster.splice(idx, 1);
+        saveLocalBackup();
+      }
+      closeEditModal();
+      renderAllViews();
+    }
+
+    function openConfigModal() {
+      document.getElementById('passphrase-input').value = syncPassphrase;
+      document.getElementById('config-modal').classList.remove('hidden');
+    }
+
+    function closeConfigModal() {
+      document.getElementById('config-modal').classList.add('hidden');
+    }
+
+    async function saveCloudPassphrase() {
+      const val = document.getElementById('passphrase-input').value.trim();
+      if (!val) return;
+      
+      syncPassphrase = val;
+      localStorage.setItem('loaner_sync_passphrase', val);
+      closeConfigModal();
+
+      await syncFromCloud();
+    }
+
+    function clearCloudPassphrase() {
+      syncPassphrase = '';
+      localStorage.removeItem('loaner_sync_passphrase');
+      closeConfigModal();
+      updateCloudStatusBanner('local');
+    }
+
+    function updateCloudStatusBanner(mode) {
+      const badge = document.getElementById('cloud-status-badge');
+      const dot = document.getElementById('cloud-status-dot');
+      const text = document.getElementById('cloud-status-text');
+      if (!badge) return;
+
+      if (mode === 'online') {
+        badge.className = "text-[11px] bg-emerald-950/90 text-emerald-300 border border-emerald-500/50 px-2.5 py-0.5 rounded-full flex items-center gap-1.5 font-semibold cursor-pointer hover:bg-emerald-900/80 transition";
+        dot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-pulse";
+        text.innerText = "Encrypted Cloud Sync Active";
+      } else if (mode === 'error') {
+        badge.className = "text-[11px] bg-rose-950/90 text-rose-300 border border-rose-500/50 px-2.5 py-0.5 rounded-full flex items-center gap-1.5 font-semibold cursor-pointer hover:bg-rose-900/80 transition";
+        dot.className = "w-2 h-2 rounded-full bg-rose-400";
+        text.innerText = "Sync Failed (Wrong Passphrase?)";
+      } else {
+        badge.className = "text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-600 px-2.5 py-0.5 rounded-full flex items-center gap-1.5 font-semibold cursor-pointer transition";
+        dot.className = "w-2 h-2 rounded-full bg-amber-400";
+        text.innerText = "Local Mode (Click to Set Sync Passphrase)";
+      }
+    }
+
+    function exportJsonData() {
+      const data = {
+        roster: customRoster,
+        logs: logs,
+        exportDate: new Date().toISOString()
+      };
+      const jsonStr = JSON.stringify(data, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `chromebook_loaner_backup_${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function exportCsvLogs() {
+      if (logs.length === 0) return;
+      const headers = ["Student ID", "First Name", "Last Name", "Grade", "6th Period", "Asset Tag", "Date", "Time Out", "Time In", "Status"];
+      const rows = logs.map(l => [
+        `"${l.studentId || ''}"`,
+        `"${l.firstName || ''}"`,
+        `"${l.lastName || ''}"`,
+        `"${l.grade || ''}"`,
+        `"${l.period6 || ''}"`,
+        `"${l.assetTag || ''}"`,
+        `"${l.dateStr || ''}"`,
+        `"${l.timeOut || ''}"`,
+        `"${l.timeIn || ''}"`,
+        `"${l.status || ''}"`
+      ]);
+      const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
+      const encodedUri = encodeURI(csvContent);
+      const a = document.createElement('a');
+      a.href = encodedUri;
+      a.download = `chromebook_loans_${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+    }
+
+    function importJsonData() {
+      const raw = document.getElementById('import-json-input').value.trim();
+      if (!raw) return;
+      try {
+        const parsed = JSON.parse(raw);
+        if (parsed.roster && Array.isArray(parsed.roster)) customRoster = parsed.roster;
+        if (parsed.logs && Array.isArray(parsed.logs)) logs = parsed.logs;
+        saveLocalBackup();
+        renderAllViews();
+        document.getElementById('import-json-input').value = '';
+        switchTab('kiosk');
+      } catch (e) {
+        // Ignored invalid JSON
+      }
+    }
+  </script>
+
+</body>
+</html>
